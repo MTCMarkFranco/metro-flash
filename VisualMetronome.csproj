@@ -12,7 +12,7 @@
     <PackageReference Include="SpotifyAPI.Web" Version="7.1.1" />
     <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.1.1" />
     <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />
-    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="131.0.6778.10400" />
+    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="143.0.6967.8800" />
   </ItemGroup>
 
 </Project>
