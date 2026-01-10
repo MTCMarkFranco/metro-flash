@@ -23,8 +23,7 @@
                    HorizontalAlignment="Center" 
                    VerticalAlignment="Top" 
                    Margin="20"
-                   Background="#AA000000"
-                   Height="80">
+                   Background="#AA000000">
             
             <TextBlock Text="BPM:" 
                       FontSize="24" 
@@ -56,9 +55,97 @@
                       Margin="20,0,0,0"/>
         </StackPanel>
         
+        <!-- Spotify Control Panel -->
+        <StackPanel Orientation="Vertical" 
+                   HorizontalAlignment="Left" 
+                   VerticalAlignment="Top" 
+                   Margin="20,120,0,0"
+                   Background="#AA000000"
+                   Visibility="Visible">
+            
+            <TextBlock Text="Spotify Integration" 
+                      FontSize="20" 
+                      Foreground="White" 
+                      Margin="15,10,15,10"
+                      FontWeight="Bold"/>
+            
+            <Button x:Name="SpotifyLoginButton" 
+                   Content="Connect to Spotify" 
+                   FontSize="16" 
+                   Margin="15,5,15,5"
+                   Height="40"
+                   Click="SpotifyLoginButton_Click"/>
+            
+            <ComboBox x:Name="PlaylistComboBox" 
+                     FontSize="14" 
+                     Margin="15,5,15,5"
+                     Height="35"
+                     IsEnabled="False"
+                     SelectionChanged="PlaylistComboBox_SelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            
+            <StackPanel Orientation="Horizontal" 
+                       HorizontalAlignment="Center" 
+                       Margin="15,10,15,5">
+                
+                <Button x:Name="PreviousButton" 
+                       Content="◀ Previous" 
+                       FontSize="24" 
+                       Width="160"
+                       Height="60"
+                       Margin="0,0,15,0"
+                       IsEnabled="False"
+                       Click="PreviousButton_Click"/>
+                
+                <Button x:Name="StartButton" 
+                       Content="▶ Start" 
+                       FontSize="24" 
+                       Width="160"
+                       Height="60"
+                       Margin="0,0,15,0"
+                       IsEnabled="False"
+                       Click="StartButton_Click"/>
+                
+                <Button x:Name="NextButton" 
+                       Content="Next ▶" 
+                       FontSize="24" 
+                       Width="160"
+                       Height="60"
+                       IsEnabled="False"
+                       Click="NextButton_Click"/>
+            </StackPanel>
+            
+            <TextBlock x:Name="CurrentTrackText" 
+                      Text="No track loaded" 
+                      FontSize="12" 
+                      Foreground="LightGray" 
+                      Margin="15,10,15,10"
+                      TextWrapping="Wrap"/>
+        </StackPanel>
+        
         <!-- Central display area -->
         <StackPanel VerticalAlignment="Center" 
                    HorizontalAlignment="Center">
+            
+            <TextBlock x:Name="SongTitleDisplay" 
+                      Text="" 
+                      FontSize="72" 
+                      Foreground="White" 
+                      HorizontalAlignment="Center"
+                      FontWeight="Bold"
+                      TextWrapping="Wrap"
+                      TextAlignment="Center"
+                      MaxWidth="1200"
+                      Margin="20,0,20,20">
+                <TextBlock.Effect>
+                    <DropShadowEffect ShadowDepth="3" BlurRadius="5" Opacity="0.5"/>
+                </TextBlock.Effect>
+            </TextBlock>
             
             <TextBlock x:Name="BpmDisplay" 
                       Text="120 BPM" 
@@ -70,12 +157,6 @@
                     <DropShadowEffect ShadowDepth="3" BlurRadius="5" Opacity="0.5"/>
                 </TextBlock.Effect>
             </TextBlock>
-            
-            <TextBlock Text="Visual Metronome" 
-                      FontSize="24" 
-                      Foreground="LightGray" 
-                      HorizontalAlignment="Center"
-                      Margin="0,20,0,0"/>
         </StackPanel>
         
         <!-- Instructions at the bottom -->
