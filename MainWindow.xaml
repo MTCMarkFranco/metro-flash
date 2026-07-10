@@ -120,6 +120,21 @@
                        Click="NextButton_Click"/>
             </StackPanel>
             
+            <Button x:Name="CacheSetlistButton" 
+                   Content="⬇ Cache Setlist BPM (offline prep)" 
+                   FontSize="14" 
+                   Margin="15,5,15,5"
+                   Height="40"
+                   IsEnabled="False"
+                   Click="CacheSetlistButton_Click"/>
+            
+            <TextBlock x:Name="CacheProgressText" 
+                      Text="" 
+                      FontSize="12" 
+                      Foreground="#FF7FD37F" 
+                      Margin="15,0,15,5"
+                      TextWrapping="Wrap"/>
+            
             <TextBlock x:Name="CurrentTrackText" 
                       Text="No track loaded" 
                       FontSize="12" 

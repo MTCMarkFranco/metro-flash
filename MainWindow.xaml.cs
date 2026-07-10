@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     // Spotify integration
     private SpotifyService? _spotifyService;
     private BpmScraperService? _bpmScraperService;
+    private BpmCacheService _bpmCacheService = new();
     private List<PlaylistInfo> _playlists = new();
     private List<TrackInfo> _currentPlaylistTracks = new();
     private int _currentTrackIndex = -1;
@@ -161,10 +162,18 @@ public partial class MainWindow : Window
         // Calculate interval: 60 seconds / BPM = seconds per beat
         double intervalMs = (60.0 / bpm) * 1000;
         
-        // Simply update the interval - timer keeps running smoothly
+        // Update the interval. DispatcherTimer does not reliably apply a new
+        // Interval while it is still running, so stop and restart it to force
+        // the new tempo to take effect immediately.
         if (metronomeTimer != null)
         {
+            bool wasEnabled = metronomeTimer.IsEnabled;
+            metronomeTimer.Stop();
             metronomeTimer.Interval = TimeSpan.FromMilliseconds(intervalMs);
+            if (wasEnabled)
+            {
+                metronomeTimer.Start();
+            }
         }
         
         // Update status text
@@ -335,6 +344,7 @@ public partial class MainWindow : Window
             _currentTrackIndex = -1;
             CurrentTrackText.Text = $"Loaded {_currentPlaylistTracks.Count} tracks";
             StartButton.IsEnabled = _currentPlaylistTracks.Count > 0;
+            CacheSetlistButton.IsEnabled = _currentPlaylistTracks.Count > 0;
             StatusText.Text = "Ready to start";
         }
         catch (Exception ex)
@@ -382,16 +392,39 @@ public partial class MainWindow : Window
         
         CurrentTrackText.Text = $"Now Playing: {track.Name}\nBy: {track.Artists}\n\nSearching for BPM...";
         SongTitleDisplay.Text = track.Name;
-        StatusText.Text = $"Searching songbpm.com for BPM...";
         
-        // Initialize BPM scraper if needed
-        if (_bpmScraperService == null)
+        // Check cache first
+        var bpm = _bpmCacheService.GetCachedBpm(track.Id);
+        
+        if (bpm.HasValue)
         {
-            _bpmScraperService = new BpmScraperService();
+            StatusText.Text = $"BPM loaded from cache";
         }
-        
-        // Scrape BPM from songbpm.com
-        var bpm = await _bpmScraperService.GetBpmAsync(track.Name, track.Artists);
+        else
+        {
+            // Try Spotify audio features API first
+            StatusText.Text = $"Getting BPM from Spotify...";
+            bpm = await _spotifyService.GetTrackBpmAsync(track.Id);
+            
+            // If Spotify didn't return BPM, fall back to scraper
+            if (!bpm.HasValue)
+            {
+                StatusText.Text = $"Searching songbpm.com for BPM...";
+                
+                if (_bpmScraperService == null)
+                {
+                    _bpmScraperService = new BpmScraperService();
+                }
+                
+                bpm = await _bpmScraperService.GetBpmAsync(track.Name, track.Artists);
+            }
+            
+            // Cache the result if found
+            if (bpm.HasValue)
+            {
+                _bpmCacheService.CacheBpm(track.Id, track.Name, track.Artists, bpm.Value);
+            }
+        }
         
         if (bpm.HasValue)
         {
@@ -416,5 +449,84 @@ public partial class MainWindow : Window
             BpmTextBox.Focus();
             BpmTextBox.SelectAll();
         }
+    }
+
+    private async void CacheSetlistButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_spotifyService == null || _currentPlaylistTracks.Count == 0) return;
+
+        // Disable navigation while pre-caching so nothing changes the track list
+        CacheSetlistButton.IsEnabled = false;
+        StartButton.IsEnabled = false;
+        PreviousButton.IsEnabled = false;
+        NextButton.IsEnabled = false;
+        PlaylistComboBox.IsEnabled = false;
+
+        int total = _currentPlaylistTracks.Count;
+        int cached = 0;
+        int found = 0;
+        int failed = 0;
+        var missing = new List<string>();
+
+        for (int i = 0; i < total; i++)
+        {
+            var track = _currentPlaylistTracks[i];
+
+            StatusText.Text = $"Caching BPM {i + 1}/{total}...";
+            CacheProgressText.Text = $"[{i + 1}/{total}] {track.Name} - {track.Artists}";
+            SongTitleDisplay.Text = track.Name;
+
+            // Already cached? skip network work
+            if (_bpmCacheService.GetCachedBpm(track.Id).HasValue)
+            {
+                cached++;
+                found++;
+                continue;
+            }
+
+            int? bpm = null;
+            try
+            {
+                // Try Spotify audio features first, then fall back to the scraper
+                bpm = await _spotifyService.GetTrackBpmAsync(track.Id);
+
+                if (!bpm.HasValue)
+                {
+                    if (_bpmScraperService == null)
+                    {
+                        _bpmScraperService = new BpmScraperService();
+                    }
+
+                    bpm = await _bpmScraperService.GetBpmAsync(track.Name, track.Artists);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Cache error for {track.Name}: {ex.Message}");
+            }
+
+            if (bpm.HasValue)
+            {
+                _bpmCacheService.CacheBpm(track.Id, track.Name, track.Artists, bpm.Value);
+                found++;
+            }
+            else
+            {
+                failed++;
+                missing.Add($"{track.Name} - {track.Artists}");
+            }
+        }
+
+        StatusText.Text = $"Setlist cached: {found}/{total} found ({cached} already cached, {failed} missing)";
+        CacheProgressText.Text = failed == 0
+            ? $"✓ All {total} songs cached. Safe to go offline for the gig."
+            : $"✓ {found}/{total} cached. Missing BPM for: {string.Join("; ", missing)}";
+
+        // Re-enable controls
+        CacheSetlistButton.IsEnabled = true;
+        StartButton.IsEnabled = _currentPlaylistTracks.Count > 0;
+        PlaylistComboBox.IsEnabled = true;
+        PreviousButton.IsEnabled = _currentTrackIndex > 0;
+        NextButton.IsEnabled = _currentTrackIndex < _currentPlaylistTracks.Count - 1;
     }
 }

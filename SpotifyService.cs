@@ -146,6 +146,29 @@ public class SpotifyService
 
         return tracks;
     }
+
+    public async Task<int?> GetTrackBpmAsync(string trackId)
+    {
+        if (_spotify == null)
+            throw new InvalidOperationException("Not authenticated");
+
+        try
+        {
+            var features = await _spotify.Tracks.GetAudioFeatures(trackId);
+            if (features?.Tempo > 0)
+            {
+                int bpm = (int)Math.Round(features.Tempo);
+                Console.WriteLine($"✓ Spotify audio features returned BPM: {bpm}");
+                return bpm;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Spotify audio features unavailable: {ex.Message}");
+        }
+
+        return null;
+    }
 }
 
 public class PlaylistInfo
